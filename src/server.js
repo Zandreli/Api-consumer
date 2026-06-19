@@ -13,7 +13,8 @@ app.use(express.static(path.join(__dirname, '../src')));
 const AUTH_URL = "https://sandbox.api.gateway.kasapay.com/v1/auth";
 const PAYOUT_URL = "https://sandbox.api.gateway.kasapay.com/v1/payouts/initiate";
 const CHECKOUT_URL = "https://sandbox.api.gateway.kasapay.com/v2/checkout/initiate";
-const CHECKOUT_UI_URL = "https://sandbox.checkout.kasapay.com"
+const CHECKOUT_UI_URL = "https://sandbox.checkout.kasapay.com";
+const FX_URL = "https://dev.kasapay.com/v1/fx";
 
 //Customers
 const customers = [
@@ -138,6 +139,24 @@ function KasapayEncryption(payload, IVKey, consumerSecret) {
     return encryptedPayload;
 }
 
+//FX Logic
+async function getExchangeRates(token, baseCurrency = "USD") {
+    const response = await fetch(`${FX_URL}?base_currency=${baseCurrency}`, {
+        method: "GET",
+        headers: {
+            "x-access-token": token,
+        },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(JSON.stringify(data));
+    }
+
+    return data;
+}
+
 //Checkout logic
 async function initiateCheckout(token, body) {
     const merchantTransactionId = `TX-${Date.now()}`;
@@ -247,7 +266,7 @@ app.post("/checkout/:id", async (req, res) => {
             service_code: "PRECHE241"
         });
 
-        res.redirect(result);
+        res.redirect({ redirectUrl: result });
 
         res.send(`
             <h2>Checkout Successful</h2>
@@ -266,6 +285,19 @@ app.post("/checkout/:id", async (req, res) => {
 
 app.get("/customers", (req, res) => {
     res.json(customers);
+});
+
+app.get("/fx-rates", async (req, res) => {
+    try {
+        const base = req.query.base || "USD";
+        const token = await getAccessToken();
+        const rates = await getExchangeRates(token, base);
+        res.json(rates);
+    } catch (err) {
+        res.status(500).json({
+            error: err.message
+        });
+    }
 });
 
 const PORT = 3000;

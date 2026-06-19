@@ -201,6 +201,77 @@
             border: 1px solid #bee5eb;
         }
 
+        .fx-container {
+            background: rgba(255, 255, 255, 0.1);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .fx-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .fx-header h2 {
+            font-size: 1.2em;
+        }
+
+        .btn-refresh {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 5px 15px;
+            font-size: 0.8em;
+            width: auto;
+            flex: none;
+        }
+
+        .btn-refresh:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .fx-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .fx-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .fx-currency {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .fx-rate-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .fx-label {
+            opacity: 0.7;
+        }
+
+        .fx-value {
+            font-family: monospace;
+            color: #2ecc71;
+        }
+
         .footer {
             text-align: center;
             color: white;
@@ -230,6 +301,16 @@
             <p>Test Payouts and Checkouts with Your Sandbox Credentials</p>
         </div>
 
+        <div class="fx-container" id="fxContainer">
+            <div class="fx-header">
+                <h2>💱 Live Exchange Rates (Base: USD)</h2>
+                <button class="btn-refresh" onclick="loadFXRates()">🔄 Refresh Rates</button>
+            </div>
+            <div class="fx-grid" id="fxGrid">
+                <div class="fx-loading">Fetching latest rates...</div>
+            </div>
+        </div>
+
         <div class="customers-grid" id="customersContainer">
             <!-- Customers will be loaded here -->
         </div>
@@ -249,8 +330,44 @@
     <script>
         const API_BASE = window.location.origin;
 
-        // Load customers on page load
-        document.addEventListener('DOMContentLoaded', loadCustomers);
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCustomers();
+            loadFXRates();
+        });
+
+        async function loadFXRates() {
+            const grid = document.getElementById('fxGrid');
+            try {
+                const response = await fetch(`${API_BASE}/fx-rates?base=USD`);
+                const data = await response.json();
+                
+                grid.innerHTML = "";
+                const currencies = ["KES", 'NGN', 'UGX', 'TZS'];
+                
+                currencies.forEach(curr => {
+                    if (data.rates[curr]) {
+                        const card = document.createElement('div');
+                        card.className = 'fx-card';
+                        card.innerHTML = `
+                            <span class="fx-currency">${curr}</span>
+                            <div class="fx-rate-row">
+                                <span class="fx-label">Buying:</span>
+                                <span class="fx-value">${parseFloat(data.rates[curr].buying).toFixed(2)}</span>
+                            </div>
+                            <div class="fx-rate-row">
+                                <span class="fx-label">Selling:</span>
+                                <span class="fx-value">${parseFloat(data.rates[curr].selling).toFixed(2)}</span>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    }
+                });
+            } catch (error) {
+                grid.innerHTML = '<div class="fx-error">Failed to load rates</div>';
+                console.error('FX Error:', error);
+            }
+        }
 
         async function loadCustomers() {
             try {
@@ -333,7 +450,7 @@
 
             showLoading(true);
             try {
-                const response = await fetch(`${API_BASE}/checkout/:${customerId}`, {
+                const response = await fetch(`${API_BASE}/checkout/${customerId}`, {
                     method: 'POST'
                 });
 
