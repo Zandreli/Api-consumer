@@ -1,13 +1,19 @@
 require("dotenv").config();
 const express = require("express");
 
+const crypto = require("crypto");
+
 const app = express();
+const path = require('path');
+
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '../src')));
 
 // Config
 const AUTH_URL = "https://sandbox.api.gateway.kasapay.com/v1/auth";
 const PAYOUT_URL = "https://sandbox.api.gateway.kasapay.com/v1/payouts/initiate";
 const CHECKOUT_URL = "https://sandbox.api.gateway.kasapay.com/v2/checkout/initiate";
+const CHECKOUT_UI_URL = "https://sandbox.checkout.kasapay.com"
 
 //Customers
 const customers = [
@@ -110,6 +116,28 @@ async function sendPayout(token, body) {
     return JSON.parse(text);
 }
 
+//Kasapay Encryption function
+function KasapayEncryption(payload, IVKey, consumerSecret) {
+    let jsonStringPayload = JSON.stringify(payload);
+    let key = crypto
+        .createHash("sha256")
+        .update(IVKey)
+        .digest("hex")
+        .substring(0, 16);
+    key = Buffer.from(key);
+    let secret = crypto
+        .createHash("sha256")
+        .update(consumerSecret)
+        .digest("hex")
+        .substring(0, 32);
+    secret = Buffer.from(secret);
+    const cipher = crypto.createCipheriv("aes-256-cbc", secret, key);
+    let encryptedData = cipher.update(jsonStringPayload, "utf-8", "hex");
+    encryptedData += cipher.final("hex");
+    let encryptedPayload = Buffer.from(encryptedData, "hex").toString("base64");
+    return encryptedPayload;
+}
+
 //Checkout logic
 async function initiateCheckout(token, body) {
     const merchantTransactionId = `TX-${Date.now()}`;
@@ -125,33 +153,36 @@ async function initiateCheckout(token, body) {
         expires_in: 100,
         narration: body.narration || "Checkout Final",
         callback_url: body.callback_url,
-        redirect_url: body.redirect_url
+        redirect_url: body.redirect_url 
     };
 
-    const response = await fetch(CHECKOUT_URL, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "x-access-token": token,
-        },
-        body: JSON.stringify(payload),
-    });
+    const encryptedPayload = KasapayEncryption(payload, process.env.IV_KEY, process.env.CONSUMER_SECRET);
+    const redirectUrl = `${CHECKOUT_UI_URL}/?access_key=${process.env.ACCESS_KEY}&payload=${encryptedPayload}`;
+    return redirectUrl;
+    // const response = await fetch(CHECKOUT_URL, {
+    //     method: "POST",
+    //     headers: {
+    //         "Content-Type": "application/json",
+    //         "x-access-token": token,
+    //     },
+    //     body: JSON.stringify(payload),
+    // });
 
-    const text = await response.text();
+    // const text = await response.text();
 
-    console.log("STATUS:", response.status);
-    console.log("RAW RESPONSE:", text);
+    // console.log("STATUS:", response.status);
+    // console.log("RAW RESPONSE:", text);
 
-    if (!response.ok) {
-        throw new Error(text);
-    }
+    // if (!response.ok) {
+    //     throw new Error(text);
+    // }
 
-    return JSON.parse(text);
+    // return JSON.parse(text);
 }
 
 //Localhost route
 app.get("/", (req, res) => {
-    res.send("Server running");
+    res.sendFile(path.join(__dirname, '../src/index.html'));
 });
 
 //Payout endpoint
@@ -216,6 +247,8 @@ app.post("/checkout/:id", async (req, res) => {
             service_code: "PRECHE241"
         });
 
+        res.redirect(result);
+
         res.send(`
             <h2>Checkout Successful</h2>
             <pre>${JSON.stringify(result, null, 2)}</pre>
@@ -238,5 +271,6 @@ app.get("/customers", (req, res) => {
 const PORT = 3000;
 
 app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`\nServer running at http://localhost:${PORT}`);
+    console.log(`Open http://localhost:${PORT} in your browser to access the dashboard\n`)
 });

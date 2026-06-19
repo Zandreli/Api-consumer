@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kasapay API Consumer Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .customers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .customer-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .customer-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .customer-info {
+            margin-bottom: 20px;
+        }
+
+        .customer-info h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.95em;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .info-value {
+            color: #888;
+            word-break: break-all;
+        }
+
+        .amount {
+            color: #27ae60;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-payout {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-payout:hover {
+            background: #2980b9;
+            transform: scale(1.02);
+        }
+
+        .btn-payout:active {
+            transform: scale(0.98);
+        }
+
+        .btn-checkout {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-checkout:hover {
+            background: #229954;
+            transform: scale(1.02);
+        }
+
+        .btn-checkout:active {
+            transform: scale(0.98);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-message {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .status-message.active {
+            display: block;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .customers-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Kasapay API Consumer</h1>
+            <p>Test Payouts and Checkouts with Your Sandbox Credentials</p>
+        </div>
+
+        <div class="customers-grid" id="customersContainer">
+            <!-- Customers will be loaded here -->
+        </div>
+
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner"></div>
+            <p>Processing transaction...</p>
+        </div>
+
+        <div class="status-message" id="statusMessage"></div>
+
+        <div class="footer">
+            <p>Connected to Kasapay Sandbox • All transactions are test transactions</p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        // Load customers on page load
+        document.addEventListener('DOMContentLoaded', loadCustomers);
+
+        async function loadCustomers() {
+            try {
+                const response = await fetch(`${API_BASE}/customers`);
+                const customers = await response.json();
+                renderCustomers(customers);
+            } catch (error) {
+                showStatus('Failed to load customers', 'error');
+                console.error('Error loading customers:', error);
+            }
+        }
+
+        function renderCustomers(customers) {
+            const container = document.getElementById('customersContainer');
+            container.innerHTML = '';
+
+            customers.forEach(customer => {
+                const card = document.createElement('div');
+                card.className = 'customer-card';
+                card.innerHTML = `
+                    <div class="customer-info">
+                        <h3>${customer.firstName} ${customer.lastName}</h3>
+                        <div class="info-row">
+                            <span class="info-label">Email:</span>
+                            <span class="info-value">${customer.email}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Phone:</span>
+                            <span class="info-value">${customer.phone}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Amount:</span>
+                            <span class="info-value amount">KES ${customer.amount.toLocaleString()}</span>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn-payout" onclick="triggerPayout(${customer.id}, '${customer.firstName} ${customer.lastName}')">
+                            💸 Payout
+                        </button>
+                        <button class="btn-checkout" onclick="triggerCheckout(${customer.id}, '${customer.firstName} ${customer.lastName}')">
+                            🛒 Checkout
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function triggerPayout(customerId, customerName) {
+            if (!confirm(`Process payout for ${customerName}?`)) {
+                return;
+            }
+
+            showLoading(true);
+            try {
+                const response = await fetch(`${API_BASE}/payout/${customerId}`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const html = await response.text();
+                    showStatus(`✅ Payout initiated successfully for ${customerName}. Check your Kasapay dashboard for details.`, 'success');
+                    console.log('Payout Response:', html);
+                } else {
+                    const error = await response.json();
+                    showStatus(`❌ Payout failed: ${error.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+                console.error('Payout error:', error);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function triggerCheckout(customerId, customerName) {
+            if (!confirm(`Initiate checkout for ${customerName}?`)) {
+                return;
+            }
+
+            showLoading(true);
+            try {
+                const response = await fetch(`${API_BASE}/checkout/:${customerId}`, {
+                    method: 'POST'
+                });
+
+                if (response.status === 302 || response.redirected) {
+                    // Get the redirect location
+                    const redirectUrl = response.headers.get('location') || response.url;
+                    showStatus(`✅ Checkout initiated! Redirecting to Kasapay payment page...`, 'success');
+                    setTimeout(() => {
+                        window.location.href = redirectUrl;
+                    }, 1500);
+                } else if (response.ok) {
+                    const data = await response.json();
+                    showStatus(`✅ Checkout initiated for ${customerName}`, 'success');
+                    console.log('Checkout Response:', data);
+                } else {
+                    const error = await response.json();
+                    showStatus(`❌ Checkout failed: ${error.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+                console.error('Checkout error:', error);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function showLoading(show) {
+            const loader = document.getElementById('loadingIndicator');
+            if (show) {
+                loader.classList.add('active');
+            } else {
+                loader.classList.remove('active');
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = `status-message active ${type}`;
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                statusDiv.classList.remove('active');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
