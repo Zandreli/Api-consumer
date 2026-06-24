@@ -37,7 +37,7 @@ async function initiateCheckout(token) {
         expires_in: 100,
         narration: "Checkout payment",
         callback_url: "https://mpa0e5920feb8609e0a8.free.beeceptor.com",
-        redirect_url: "https://mpa0e5920feb8609e0a8.free.beeceptor.com",
+        redirect_url: "https://sandbox.checkout.kasapay.com",
     };
 
     const response = await fetch(CHECKOUT_URL, {

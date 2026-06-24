@@ -28,16 +28,16 @@ async function initiateCheckout(token) {
     const merchantTransactionId = `TX-${Date.now()}`;
     const payload = {
         merchant_transaction_id: merchantTransactionId,
-        amount: 10000,
-        payer_name: "Lois Griffin",
-        payer_email: "lois@griffin.com",
-        payer_msisdn: "+254700000002",
+        amount: 15000,
+        payer_name: "Riddick Furya",
+        payer_email: "Riddick@furya.com",
+        payer_msisdn: "+254700000006",
         service_code: "PRECHE241",
-        account_number: "+254700000002",
+        account_number: "+254700000006",
         expires_in: 100,
         narration: "Checkout payment",
         callback_url: "https://mpa0e5920feb8609e0a8.free.beeceptor.com",
-        redirect_url: "https://mpa0e5920feb8609e0a8.free.beeceptor.com",
+        redirect_url: "https://sandbox.checkout.kasapay.com",
     };
 
     const response = await fetch(CHECKOUT_URL, {
